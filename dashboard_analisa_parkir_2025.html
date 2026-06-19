@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Analisa Parkir 2025</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --aspal-1:#1c2024;
+    --aspal-2:#23282d;
+    --aspal-3:#2c3238;
+    --garis:#3a4047;
+    --kuning:#f4c430;
+    --kuning-soft:#f4c43022;
+    --putih:#eef0f2;
+    --abu:#9aa3ab;
+    --abu-dim:#6b7378;
+    --hijau:#4caf7d;
+    --merah:#e0635a;
+    --biru:#5b9bd1;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--aspal-1);
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 78px, var(--garis) 78px, var(--garis) 79px),
+      radial-gradient(circle at 10% 0%, #2a2f34 0%, var(--aspal-1) 55%);
+    color:var(--putih);
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height:100vh;
+  }
+  .mono{ font-family:'JetBrains Mono','Courier New',monospace; }
+
+  /* ===== HEADER ===== */
+  header{
+    position:relative;
+    padding:34px 5vw 26px;
+    border-bottom:3px dashed var(--kuning);
+    background:linear-gradient(180deg, var(--aspal-2) 0%, var(--aspal-1) 100%);
+    overflow:hidden;
+  }
+  header::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:8px;
+    background:repeating-linear-gradient(90deg, var(--kuning) 0 36px, transparent 36px 64px);
+    opacity:0.85;
+  }
+  .header-row{
+    display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:18px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    letter-spacing:.18em; text-transform:uppercase;
+    font-size:12px; color:var(--kuning); margin:0 0 10px;
+  }
+  h1{
+    font-size:clamp(28px,4vw,44px); margin:0; font-weight:800; letter-spacing:-0.01em;
+    line-height:1.05;
+  }
+  h1 span{color:var(--kuning);}
+  .subjudul{ color:var(--abu); margin-top:10px; font-size:15px; max-width:640px; }
+  .periode-box{
+    border:2px solid var(--kuning); border-radius:var(--radius);
+    padding:14px 20px; text-align:right; background:var(--kuning-soft);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .periode-box .label{ font-size:11px; color:var(--abu); letter-spacing:.08em; text-transform:uppercase;}
+  .periode-box .nilai{ font-size:20px; color:var(--kuning); font-weight:700; margin-top:4px;}
+
+  .catatan-data{
+    margin-top:16px;
+    font-size:12.5px;
+    color:var(--abu);
+    background:#ffffff08;
+    border:1px solid var(--garis);
+    border-radius:8px;
+    padding:10px 16px;
+    max-width:780px;
+  }
+  .catatan-data b{ color:var(--kuning); }
+
+  /* ===== LAYOUT ===== */
+  main{ padding:38px 5vw 70px; max-width:1400px; margin:0 auto; }
+  section{ margin-bottom:48px; }
+  .section-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:18px;}
+  .section-num{
+    font-family:'JetBrains Mono',monospace; color:var(--aspal-1); background:var(--kuning);
+    font-weight:700; font-size:13px; padding:3px 9px; border-radius:5px;
+  }
+  .section-title{ font-size:21px; font-weight:700; margin:0;}
+  .section-desc{ color:var(--abu); font-size:13.5px; margin:6px 0 0 0; max-width:760px; }
+
+  /* ===== KPI TICKET CARDS ===== */
+  .kpi-grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px;
+  }
+  .tiket{
+    position:relative;
+    background:var(--aspal-2);
+    border:1px solid var(--garis);
+    border-radius:var(--radius);
+    padding:20px 20px 18px;
+    overflow:hidden;
+  }
+  .tiket::before{
+    content:"";
+    position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--kuning);
+  }
+  .tiket .lbl{ font-size:12px; color:var(--abu); letter-spacing:.04em; }
+  .tiket .val{ font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; margin-top:8px; color:var(--putih);}
+  .tiket .ket{ font-size:12px; color:var(--abu-dim); margin-top:6px;}
+  .tiket .val.kuning{ color:var(--kuning); }
+  .tiket .val.merah{ color:var(--merah); }
+  .tiket .val.hijau{ color:var(--hijau); }
+
+  /* ===== CARD CHART ===== */
+  .grid-2{ display:grid; grid-template-columns:1.4fr 1fr; gap:18px; }
+  .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  @media (max-width:900px){ .grid-2,.grid-3{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--aspal-2);
+    border:1px solid var(--garis);
+    border-radius:var(--radius);
+    padding:20px 22px 16px;
+  }
+  .card h3{ margin:0 0 2px; font-size:15px; font-weight:700; }
+  .card .card-sub{ font-size:12px; color:var(--abu); margin-bottom:14px; }
+  .chart-wrap{ position:relative; }
+
+  /* ===== INSIGHT LIST ===== */
+  .insight-box{
+    background:var(--aspal-3);
+    border-left:3px solid var(--kuning);
+    border-radius:8px;
+    padding:14px 18px;
+    margin-top:14px;
+    font-size:13.5px;
+    color:var(--putih);
+    line-height:1.55;
+  }
+  .insight-box b{ color:var(--kuning); }
+  .insight-box.merah{ border-left-color:var(--merah); }
+  .insight-box.merah b{ color:var(--merah); }
+  .insight-box.hijau{ border-left-color:var(--hijau); }
+  .insight-box.hijau b{ color:var(--hijau); }
+
+  /* ===== TABLE ===== */
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th,td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--garis); }
+  th{ color:var(--abu); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em;}
+  td.num, th.num{ text-align:right; font-family:'JetBrains Mono',monospace; }
+  tr:hover td{ background:#ffffff06; }
+
+  /* ===== TOGGLE BUTTONS ===== */
+  .toggle-group{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+  .toggle-btn{
+    background:var(--aspal-3); color:var(--abu); border:1px solid var(--garis);
+    padding:6px 14px; border-radius:20px; font-size:12.5px; cursor:pointer;
+    font-family:inherit; transition:all .15s;
+  }
+  .toggle-btn.active{ background:var(--kuning); color:var(--aspal-1); border-color:var(--kuning); font-weight:700;}
+
+  footer{
+    text-align:center; padding:28px 5vw 40px; color:var(--abu-dim); font-size:12px;
+    border-top:1px solid var(--garis);
+  }
+
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    background:#ffffff10; border-radius:20px; padding:4px 10px; font-size:11.5px; color:var(--abu);
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <p class="eyebrow">▸ Laporan Operasional &amp; Bisnis</p>
+      <h1>Dashboard Parkir<span> PT. PERMATA BUNDA INVESTAMA</span> TAHUN 2025</h1>
+      <p class="subjudul">Disusun dari log transaksi sistem parkir (182.200 baris mentah) — gerbang masuk &amp; keluar, durasi, tarif, shift, dan operator — diolah menjadi gambaran performa operasional dan pendapatan sepanjang 2025.</p>
+    </div>
+    <div class="periode-box">
+      <div class="label">Periode Data Valid</div>
+      <div class="nilai" id="periode-val">14 Jun — 31 Des 2025</div>
+    </div>
+  </div>
+  <div class="catatan-data">
+    <b>Catatan cakupan data:</b> baris mentah tersebar dari Februari hingga Desember 2025, namun transaksi yang tercatat lengkap dan terbayar secara wajar baru konsisten muncul mulai pertengahan Juni 2025. Periode Februari–Mei sebagian besar berisi tiket yang ditutup otomatis oleh sistem (lihat bagian 06), sehingga dashboard ini difokuskan pada 197 hari data yang representatif secara bisnis.
+  </div>
+</header>
+
+<main>
+
+  <!-- ===================== KPI ===================== -->
+  <section>
+    <div class="kpi-grid">
+      <div class="tiket">
+        <div class="lbl">Total Transaksi Valid</div>
+        <div class="val kuning mono" id="kpi-total-trx">-</div>
+        <div class="ket">selesai &amp; tercatat bayar keluar</div>
+      </div>
+      <div class="tiket">
+        <div class="lbl">Total Pendapatan</div>
+        <div class="val mono" id="kpi-revenue">-</div>
+        <div class="ket">akumulasi 197 hari data</div>
+      </div>
+      <div class="tiket">
+        <div class="lbl">Rata-rata / Hari</div>
+        <div class="val mono" id="kpi-avg-day">-</div>
+        <div class="ket" id="kpi-avg-day-trx">- transaksi/hari</div>
+      </div>
+      <div class="tiket">
+        <div class="lbl">Rata-rata Tarif</div>
+        <div class="val mono" id="kpi-avg-tarif">-</div>
+        <div class="ket">per kendaraan keluar</div>
+      </div>
+      <div class="tiket">
+        <div class="lbl">Rata-rata Durasi Parkir</div>
+        <div class="val mono" id="kpi-avg-durasi">-</div>
+        <div class="ket" id="kpi-median-durasi">median: -</div>
+      </div>
+      <div class="tiket">
+        <div class="lbl">Anomali Sistem</div>
+        <div class="val merah mono" id="kpi-anomali">-</div>
+        <div class="ket">transaksi auto-close oleh sistem (≠ pendapatan riil)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TREND ===================== -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <div>
+        <h3 class="section-title">Tren Transaksi &amp; Pendapatan Harian</h3>
+        <p class="section-desc">Pergerakan harian sepanjang periode data valid (Juni–Desember 2025). Gunakan tombol untuk beralih antara jumlah kendaraan dan nilai pendapatan.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="toggle-group">
+        <button class="toggle-btn active" data-metric="revenue">Pendapatan (Rp)</button>
+        <button class="toggle-btn" data-metric="jumlah">Jumlah Transaksi</button>
+      </div>
+      <div class="chart-wrap" style="height:300px;">
+        <canvas id="chartHarian"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TREN BULANAN + KATEGORI ===================== -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <div>
+        <h3 class="section-title">Performa Bulanan &amp; Komposisi Kendaraan</h3>
+        <p class="section-desc">Perbandingan pendapatan antar bulan (Juni–Desember 2025), serta kontribusi dua kategori kendaraan yang tercatat dalam sistem (Kategori A dan Kategori C).</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Pendapatan per Bulan</h3>
+        <div class="card-sub">Batang = pendapatan · garis = jumlah transaksi</div>
+        <div class="chart-wrap" style="height:280px;">
+          <canvas id="chartBulanan"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Kontribusi Kategori Kendaraan</h3>
+        <div class="card-sub">Berdasarkan jumlah transaksi keluar</div>
+        <div class="chart-wrap" style="height:200px;">
+          <canvas id="chartKategori"></canvas>
+        </div>
+        <div id="kategori-detail" style="margin-top:14px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== JAM SIBUK & HARI ===================== -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <div>
+        <h3 class="section-title">Jam &amp; Hari Tersibuk</h3>
+        <p class="section-desc">Memetakan jam kedatangan kendaraan sepanjang hari dan pola mingguan, untuk dasar penjadwalan shift dan kapasitas gerbang.</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Distribusi Kedatangan per Jam</h3>
+        <div class="card-sub">Jumlah kendaraan masuk, berdasarkan jam masuk (00:00–23:00)</div>
+        <div class="chart-wrap" style="height:260px;">
+          <canvas id="chartJam"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Pendapatan per Hari dalam Minggu</h3>
+        <div class="card-sub">Senin–Minggu, akumulasi seluruh periode</div>
+        <div class="chart-wrap" style="height:260px;">
+          <canvas id="chartHariMinggu"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="insight-box" id="insight-jam"></div>
+  </section>
+
+  <!-- ===================== DURASI & TARIF ===================== -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <div>
+        <h3 class="section-title">Durasi Parkir &amp; Struktur Tarif</h3>
+        <p class="section-desc">Berapa lama kendaraan rata-rata parkir, dan nilai tarif mana yang paling sering muncul dalam transaksi.</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Distribusi Lama Parkir</h3>
+        <div class="card-sub">Dikelompokkan dari kurang dari 1 jam hingga lebih dari 24 jam</div>
+        <div class="chart-wrap" style="height:260px;">
+          <canvas id="chartDurasi"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Nilai Tarif Paling Sering Terjadi</h3>
+        <div class="card-sub">12 nilai bayar-keluar (Rp) dengan frekuensi tertinggi</div>
+        <div class="chart-wrap" style="height:260px;">
+          <canvas id="chartTarif"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SHIFT & OPERATOR ===================== -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <div>
+        <h3 class="section-title">Shift &amp; Operator</h3>
+        <p class="section-desc">Pembagian beban kerja antar shift jaga dan operator yang memproses transaksi keluar.</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Beban per Shift Masuk</h3>
+        <div class="card-sub">Jumlah kendaraan masuk dicatat per shift</div>
+        <table>
+          <thead><tr><th>Shift</th><th class="num">Transaksi</th><th class="num">Pendapatan</th><th class="num">% Pendapatan</th></tr></thead>
+          <tbody id="tabel-shift"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Beban per Operator (Pintu Keluar)</h3>
+        <div class="card-sub">Jumlah transaksi yang diproses tiap operator saat kendaraan keluar</div>
+        <table>
+          <thead><tr><th>Operator</th><th class="num">Transaksi</th><th class="num">Pendapatan</th><th class="num">% Pendapatan</th></tr></thead>
+          <tbody id="tabel-operator"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== DATA QUALITY / ANOMALI ===================== -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">06</span>
+      <div>
+        <h3 class="section-title">Catatan Kualitas Data &amp; Rekomendasi</h3>
+        <p class="section-desc">Beberapa temuan operasional yang layak ditindaklanjuti, berdasarkan pola anomali dalam log transaksi.</p>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Transaksi Auto-Close Sistem</h3>
+        <div class="val mono merah" style="font-size:22px;" id="anom-autoclose">-</div>
+        <div class="insight-box merah">
+          Sebanyak <b id="anom-autoclose-2">-</b> baris (mayoritas dari total 182.200 baris mentah) berstatus <b>"AUTO by SYSTEM"</b> dengan durasi rata-rata sekitar <b>90 hari atau lebih</b> — bukan transaksi parkir wajar, melainkan tiket lama yang ditutup otomatis tanpa pembayaran. Proporsinya jauh lebih tinggi dibanding periode lain, dan hampir seluruhnya berasal dari Kategori A. Ini layak diaudit lebih dulu sebelum Februari–Mei 2025 bisa dipakai sebagai data bisnis.
+        </div>
+      </div>
+      <div class="card">
+        <h3>Konsistensi Status Transaksi</h3>
+        <div class="val mono kuning" style="font-size:22px;" id="anom-belumkeluar">0 baris</div>
+        <div class="insight-box">
+          Tidak ditemukan baris berstatus "masih masuk / belum keluar" pada dataset ini — seluruh 182.200 baris sudah memiliki status akhir (selesai normal atau auto-close). Ini berbeda dengan pola pada data tahun lain, dan dapat dipakai sebagai sinyal bahwa data 2025 telah melalui proses penutupan akhir periode.
+        </div>
+      </div>
+      <div class="card">
+        <h3>Overstay &amp; Transaksi Tanpa Tarif</h3>
+        <div class="val mono" style="font-size:22px;" id="anom-overstay">-</div>
+        <div class="insight-box hijau">
+          <b id="anom-overstay-2">-</b> transaksi valid tercatat parkir lebih dari 24 jam (potensi inap/lupa ambil kendaraan), menyumbang sekitar <b id="anom-overstay-rev">-</b> pendapatan. Selain itu <b id="anom-gratis">-</b> transaksi keluar dengan tarif Rp 0 — perlu dicek apakah ini kebijakan toleransi, member, atau kebocoran pendapatan.
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Dashboard dibangun dari file <span class="mono">data_parkir_2025.xlsx</span> · Transaksi valid = status transaksi selesai &amp; status close normal (mengeluarkan baris anomali auto-close sistem) ·
+</footer>
+
+<script>
+const AGG = {"kpi": {"total_transaksi_valid": 47320, "total_revenue": 194053000, "avg_revenue_per_transaksi": 4100.866441251057, "avg_durasi_jam": 2.6144134263172725, "median_durasi_jam": 1.6008333333333333, "total_hari_data": 197, "avg_transaksi_per_hari": 240.2030456852792, "avg_revenue_per_hari": 985040.6091370558, "total_anomali_auto_close": 134879, "tanggal_mulai": "2025-06-14", "tanggal_akhir": "2025-12-31", "total_sedang_parkir": 0, "jumlah_overstay_24j": 442, "revenue_overstay_24j": 11242000, "jumlah_transaksi_gratis": 841}, "trend_bulanan": [{"bulan": "2025-06", "jumlah_transaksi": 1964, "revenue": 8625000, "avg_durasi": 3.4014509787282194}, {"bulan": "2025-07", "jumlah_transaksi": 7965, "revenue": 32144000, "avg_durasi": 2.661930006277464}, {"bulan": "2025-08", "jumlah_transaksi": 7739, "revenue": 32057000, "avg_durasi": 2.5928917388120776}, {"bulan": "2025-09", "jumlah_transaksi": 8491, "revenue": 34194000, "avg_durasi": 2.428026243473482}, {"bulan": "2025-10", "jumlah_transaksi": 7926, "revenue": 32985000, "avg_durasi": 2.713768118989542}, {"bulan": "2025-11", "jumlah_transaksi": 6704, "revenue": 27646000, "avg_durasi": 2.648013416534076}, {"bulan": "2025-12", "jumlah_transaksi": 6531, "revenue": 26402000, "avg_durasi": 2.432545254257473}], "trend_harian": [{"tgl": "2025-06-14", "jumlah_transaksi": 2, "revenue": 499000}, {"tgl": "2025-06-19", "jumlah_transaksi": 1, "revenue": 21000}, {"tgl": "2025-06-20", "jumlah_transaksi": 3, "revenue": 34000}, {"tgl": "2025-06-21", "jumlah_transaksi": 172, "revenue": 611000}, {"tgl": "2025-06-22", "jumlah_transaksi": 101, "revenue": 349000}, {"tgl": "2025-06-23", "jumlah_transaksi": 307, "revenue": 1355000}, {"tgl": "2025-06-24", "jumlah_transaksi": 222, "revenue": 1121000}, {"tgl": "2025-06-25", "jumlah_transaksi": 258, "revenue": 959000}, {"tgl": "2025-06-26", "jumlah_transaksi": 226, "revenue": 897000}, {"tgl": "2025-06-27", "jumlah_transaksi": 157, "revenue": 539000}, {"tgl": "2025-06-28", "jumlah_transaksi": 145, "revenue": 521000}, {"tgl": "2025-06-29", "jumlah_transaksi": 97, "revenue": 451000}, {"tgl": "2025-06-30", "jumlah_transaksi": 273, "revenue": 1268000}, {"tgl": "2025-07-01", "jumlah_transaksi": 272, "revenue": 2348000}, {"tgl": "2025-07-02", "jumlah_transaksi": 259, "revenue": 1058000}, {"tgl": "2025-07-03", "jumlah_transaksi": 376, "revenue": 1343000}, {"tgl": "2025-07-04", "jumlah_transaksi": 326, "revenue": 1134000}, {"tgl": "2025-07-05", "jumlah_transaksi": 109, "revenue": 485000}, {"tgl": "2025-07-06", "jumlah_transaksi": 64, "revenue": 258000}, {"tgl": "2025-07-07", "jumlah_transaksi": 226, "revenue": 866000}, {"tgl": "2025-07-08", "jumlah_transaksi": 217, "revenue": 924000}, {"tgl": "2025-07-09", "jumlah_transaksi": 389, "revenue": 1397000}, {"tgl": "2025-07-10", "jumlah_transaksi": 443, "revenue": 1452000}, {"tgl": "2025-07-11", "jumlah_transaksi": 208, "revenue": 893000}, {"tgl": "2025-07-12", "jumlah_transaksi": 164, "revenue": 648000}, {"tgl": "2025-07-13", "jumlah_transaksi": 118, "revenue": 665000}, {"tgl": "2025-07-14", "jumlah_transaksi": 292, "revenue": 1110000}, {"tgl": "2025-07-15", "jumlah_transaksi": 410, "revenue": 1556000}, {"tgl": "2025-07-16", "jumlah_transaksi": 368, "revenue": 1368000}, {"tgl": "2025-07-17", "jumlah_transaksi": 313, "revenue": 1382000}, {"tgl": "2025-07-18", "jumlah_transaksi": 288, "revenue": 1171000}, {"tgl": "2025-07-19", "jumlah_transaksi": 172, "revenue": 665000}, {"tgl": "2025-07-20", "jumlah_transaksi": 83, "revenue": 311000}, {"tgl": "2025-07-21", "jumlah_transaksi": 411, "revenue": 1337000}, {"tgl": "2025-07-22", "jumlah_transaksi": 407, "revenue": 1484000}, {"tgl": "2025-07-23", "jumlah_transaksi": 275, "revenue": 1094000}, {"tgl": "2025-07-24", "jumlah_transaksi": 300, "revenue": 1254000}, {"tgl": "2025-07-25", "jumlah_transaksi": 235, "revenue": 835000}, {"tgl": "2025-07-26", "jumlah_transaksi": 141, "revenue": 521000}, {"tgl": "2025-07-27", "jumlah_transaksi": 119, "revenue": 449000}, {"tgl": "2025-07-28", "jumlah_transaksi": 287, "revenue": 1048000}, {"tgl": "2025-07-29", "jumlah_transaksi": 233, "revenue": 1084000}, {"tgl": "2025-07-30", "jumlah_transaksi": 252, "revenue": 1135000}, {"tgl": "2025-07-31", "jumlah_transaksi": 208, "revenue": 869000}, {"tgl": "2025-08-01", "jumlah_transaksi": 224, "revenue": 1113000}, {"tgl": "2025-08-02", "jumlah_transaksi": 207, "revenue": 702000}, {"tgl": "2025-08-03", "jumlah_transaksi": 133, "revenue": 506000}, {"tgl": "2025-08-04", "jumlah_transaksi": 271, "revenue": 1208000}, {"tgl": "2025-08-05", "jumlah_transaksi": 273, "revenue": 1231000}, {"tgl": "2025-08-06", "jumlah_transaksi": 248, "revenue": 1023000}, {"tgl": "2025-08-07", "jumlah_transaksi": 218, "revenue": 935000}, {"tgl": "2025-08-08", "jumlah_transaksi": 324, "revenue": 1208000}, {"tgl": "2025-08-09", "jumlah_transaksi": 200, "revenue": 666000}, {"tgl": "2025-08-10", "jumlah_transaksi": 122, "revenue": 514000}, {"tgl": "2025-08-11", "jumlah_transaksi": 309, "revenue": 1533000}, {"tgl": "2025-08-12", "jumlah_transaksi": 290, "revenue": 1384000}, {"tgl": "2025-08-13", "jumlah_transaksi": 198, "revenue": 1008000}, {"tgl": "2025-08-14", "jumlah_transaksi": 292, "revenue": 1109000}, {"tgl": "2025-08-15", "jumlah_transaksi": 392, "revenue": 1444000}, {"tgl": "2025-08-16", "jumlah_transaksi": 174, "revenue": 1065000}, {"tgl": "2025-08-17", "jumlah_transaksi": 97, "revenue": 363000}, {"tgl": "2025-08-18", "jumlah_transaksi": 178, "revenue": 666000}, {"tgl": "2025-08-19", "jumlah_transaksi": 259, "revenue": 1084000}, {"tgl": "2025-08-20", "jumlah_transaksi": 420, "revenue": 1591000}, {"tgl": "2025-08-21", "jumlah_transaksi": 392, "revenue": 1459000}, {"tgl": "2025-08-22", "jumlah_transaksi": 239, "revenue": 1078000}, {"tgl": "2025-08-23", "jumlah_transaksi": 166, "revenue": 641000}, {"tgl": "2025-08-24", "jumlah_transaksi": 122, "revenue": 438000}, {"tgl": "2025-08-25", "jumlah_transaksi": 347, "revenue": 1454000}, {"tgl": "2025-08-26", "jumlah_transaksi": 437, "revenue": 1569000}, {"tgl": "2025-08-27", "jumlah_transaksi": 402, "revenue": 1494000}, {"tgl": "2025-08-28", "jumlah_transaksi": 277, "revenue": 1300000}, {"tgl": "2025-08-29", "jumlah_transaksi": 230, "revenue": 1061000}, {"tgl": "2025-08-30", "jumlah_transaksi": 203, "revenue": 821000}, {"tgl": "2025-08-31", "jumlah_transaksi": 95, "revenue": 389000}, {"tgl": "2025-09-01", "jumlah_transaksi": 364, "revenue": 1276000}, {"tgl": "2025-09-02", "jumlah_transaksi": 377, "revenue": 1344000}, {"tgl": "2025-09-03", "jumlah_transaksi": 302, "revenue": 1424000}, {"tgl": "2025-09-04", "jumlah_transaksi": 274, "revenue": 1174000}, {"tgl": "2025-09-05", "jumlah_transaksi": 193, "revenue": 754000}, {"tgl": "2025-09-06", "jumlah_transaksi": 156, "revenue": 651000}, {"tgl": "2025-09-07", "jumlah_transaksi": 173, "revenue": 529000}, {"tgl": "2025-09-08", "jumlah_transaksi": 403, "revenue": 1432000}, {"tgl": "2025-09-09", "jumlah_transaksi": 323, "revenue": 1479000}, {"tgl": "2025-09-10", "jumlah_transaksi": 264, "revenue": 1170000}, {"tgl": "2025-09-11", "jumlah_transaksi": 323, "revenue": 1368000}, {"tgl": "2025-09-12", "jumlah_transaksi": 258, "revenue": 953000}, {"tgl": "2025-09-13", "jumlah_transaksi": 332, "revenue": 1097000}, {"tgl": "2025-09-14", "jumlah_transaksi": 164, "revenue": 626000}, {"tgl": "2025-09-15", "jumlah_transaksi": 322, "revenue": 1564000}, {"tgl": "2025-09-16", "jumlah_transaksi": 310, "revenue": 1442000}, {"tgl": "2025-09-17", "jumlah_transaksi": 243, "revenue": 962000}, {"tgl": "2025-09-18", "jumlah_transaksi": 267, "revenue": 1105000}, {"tgl": "2025-09-19", "jumlah_transaksi": 313, "revenue": 1117000}, {"tgl": "2025-09-20", "jumlah_transaksi": 316, "revenue": 1160000}, {"tgl": "2025-09-21", "jumlah_transaksi": 108, "revenue": 505000}, {"tgl": "2025-09-22", "jumlah_transaksi": 276, "revenue": 1184000}, {"tgl": "2025-09-23", "jumlah_transaksi": 343, "revenue": 1353000}, {"tgl": "2025-09-24", "jumlah_transaksi": 319, "revenue": 1261000}, {"tgl": "2025-09-25", "jumlah_transaksi": 382, "revenue": 1492000}, {"tgl": "2025-09-26", "jumlah_transaksi": 394, "revenue": 1403000}, {"tgl": "2025-09-27", "jumlah_transaksi": 225, "revenue": 958000}, {"tgl": "2025-09-28", "jumlah_transaksi": 178, "revenue": 759000}, {"tgl": "2025-09-29", "jumlah_transaksi": 354, "revenue": 1561000}, {"tgl": "2025-09-30", "jumlah_transaksi": 235, "revenue": 1091000}, {"tgl": "2025-10-01", "jumlah_transaksi": 397, "revenue": 1782000}, {"tgl": "2025-10-02", "jumlah_transaksi": 458, "revenue": 1724000}, {"tgl": "2025-10-03", "jumlah_transaksi": 305, "revenue": 1317000}, {"tgl": "2025-10-04", "jumlah_transaksi": 144, "revenue": 627000}, {"tgl": "2025-10-05", "jumlah_transaksi": 127, "revenue": 531000}, {"tgl": "2025-10-06", "jumlah_transaksi": 260, "revenue": 1074000}, {"tgl": "2025-10-07", "jumlah_transaksi": 396, "revenue": 1334000}, {"tgl": "2025-10-08", "jumlah_transaksi": 399, "revenue": 1529000}, {"tgl": "2025-10-09", "jumlah_transaksi": 282, "revenue": 1181000}, {"tgl": "2025-10-10", "jumlah_transaksi": 223, "revenue": 942000}, {"tgl": "2025-10-11", "jumlah_transaksi": 95, "revenue": 672000}, {"tgl": "2025-10-12", "jumlah_transaksi": 32, "revenue": 196000}, {"tgl": "2025-10-13", "jumlah_transaksi": 334, "revenue": 1266000}, {"tgl": "2025-10-14", "jumlah_transaksi": 410, "revenue": 1588000}, {"tgl": "2025-10-15", "jumlah_transaksi": 299, "revenue": 1432000}, {"tgl": "2025-10-16", "jumlah_transaksi": 391, "revenue": 1733000}, {"tgl": "2025-10-17", "jumlah_transaksi": 227, "revenue": 946000}, {"tgl": "2025-10-18", "jumlah_transaksi": 150, "revenue": 600000}, {"tgl": "2025-10-19", "jumlah_transaksi": 166, "revenue": 543000}, {"tgl": "2025-10-20", "jumlah_transaksi": 401, "revenue": 1389000}, {"tgl": "2025-10-21", "jumlah_transaksi": 266, "revenue": 1215000}, {"tgl": "2025-10-22", "jumlah_transaksi": 365, "revenue": 1655000}, {"tgl": "2025-10-23", "jumlah_transaksi": 186, "revenue": 798000}, {"tgl": "2025-10-24", "jumlah_transaksi": 149, "revenue": 597000}, {"tgl": "2025-10-25", "jumlah_transaksi": 211, "revenue": 673000}, {"tgl": "2025-10-26", "jumlah_transaksi": 133, "revenue": 442000}, {"tgl": "2025-10-27", "jumlah_transaksi": 310, "revenue": 1374000}, {"tgl": "2025-10-28", "jumlah_transaksi": 279, "revenue": 1275000}, {"tgl": "2025-10-29", "jumlah_transaksi": 180, "revenue": 792000}, {"tgl": "2025-10-30", "jumlah_transaksi": 134, "revenue": 967000}, {"tgl": "2025-10-31", "jumlah_transaksi": 217, "revenue": 791000}, {"tgl": "2025-11-01", "jumlah_transaksi": 174, "revenue": 634000}, {"tgl": "2025-11-02", "jumlah_transaksi": 114, "revenue": 480000}, {"tgl": "2025-11-03", "jumlah_transaksi": 332, "revenue": 1788000}, {"tgl": "2025-11-04", "jumlah_transaksi": 181, "revenue": 746000}, {"tgl": "2025-11-05", "jumlah_transaksi": 162, "revenue": 700000}, {"tgl": "2025-11-06", "jumlah_transaksi": 315, "revenue": 1179000}, {"tgl": "2025-11-07", "jumlah_transaksi": 341, "revenue": 1212000}, {"tgl": "2025-11-08", "jumlah_transaksi": 138, "revenue": 639000}, {"tgl": "2025-11-09", "jumlah_transaksi": 98, "revenue": 408000}, {"tgl": "2025-11-10", "jumlah_transaksi": 150, "revenue": 1076000}, {"tgl": "2025-11-11", "jumlah_transaksi": 159, "revenue": 709000}, {"tgl": "2025-11-12", "jumlah_transaksi": 342, "revenue": 1331000}, {"tgl": "2025-11-13", "jumlah_transaksi": 306, "revenue": 1117000}, {"tgl": "2025-11-14", "jumlah_transaksi": 245, "revenue": 977000}, {"tgl": "2025-11-15", "jumlah_transaksi": 119, "revenue": 495000}, {"tgl": "2025-11-16", "jumlah_transaksi": 95, "revenue": 371000}, {"tgl": "2025-11-17", "jumlah_transaksi": 185, "revenue": 871000}, {"tgl": "2025-11-18", "jumlah_transaksi": 361, "revenue": 1465000}, {"tgl": "2025-11-19", "jumlah_transaksi": 235, "revenue": 895000}, {"tgl": "2025-11-20", "jumlah_transaksi": 266, "revenue": 1136000}, {"tgl": "2025-11-21", "jumlah_transaksi": 295, "revenue": 1227000}, {"tgl": "2025-11-22", "jumlah_transaksi": 143, "revenue": 548000}, {"tgl": "2025-11-23", "jumlah_transaksi": 57, "revenue": 256000}, {"tgl": "2025-11-24", "jumlah_transaksi": 392, "revenue": 1352000}, {"tgl": "2025-11-25", "jumlah_transaksi": 429, "revenue": 1468000}, {"tgl": "2025-11-26", "jumlah_transaksi": 335, "revenue": 1492000}, {"tgl": "2025-11-27", "jumlah_transaksi": 330, "revenue": 1525000}, {"tgl": "2025-11-28", "jumlah_transaksi": 192, "revenue": 708000}, {"tgl": "2025-11-29", "jumlah_transaksi": 101, "revenue": 431000}, {"tgl": "2025-11-30", "jumlah_transaksi": 112, "revenue": 410000}, {"tgl": "2025-12-01", "jumlah_transaksi": 409, "revenue": 1435000}, {"tgl": "2025-12-02", "jumlah_transaksi": 261, "revenue": 1236000}, {"tgl": "2025-12-03", "jumlah_transaksi": 298, "revenue": 1337000}, {"tgl": "2025-12-04", "jumlah_transaksi": 151, "revenue": 621000}, {"tgl": "2025-12-05", "jumlah_transaksi": 130, "revenue": 562000}, {"tgl": "2025-12-06", "jumlah_transaksi": 186, "revenue": 683000}, {"tgl": "2025-12-07", "jumlah_transaksi": 115, "revenue": 388000}, {"tgl": "2025-12-08", "jumlah_transaksi": 283, "revenue": 1366000}, {"tgl": "2025-12-09", "jumlah_transaksi": 149, "revenue": 636000}, {"tgl": "2025-12-10", "jumlah_transaksi": 162, "revenue": 710000}, {"tgl": "2025-12-11", "jumlah_transaksi": 182, "revenue": 772000}, {"tgl": "2025-12-12", "jumlah_transaksi": 351, "revenue": 1229000}, {"tgl": "2025-12-13", "jumlah_transaksi": 175, "revenue": 636000}, {"tgl": "2025-12-14", "jumlah_transaksi": 98, "revenue": 380000}, {"tgl": "2025-12-15", "jumlah_transaksi": 395, "revenue": 1810000}, {"tgl": "2025-12-16", "jumlah_transaksi": 227, "revenue": 930000}, {"tgl": "2025-12-17", "jumlah_transaksi": 234, "revenue": 959000}, {"tgl": "2025-12-18", "jumlah_transaksi": 375, "revenue": 1360000}, {"tgl": "2025-12-19", "jumlah_transaksi": 278, "revenue": 984000}, {"tgl": "2025-12-20", "jumlah_transaksi": 131, "revenue": 618000}, {"tgl": "2025-12-21", "jumlah_transaksi": 84, "revenue": 400000}, {"tgl": "2025-12-22", "jumlah_transaksi": 170, "revenue": 708000}, {"tgl": "2025-12-23", "jumlah_transaksi": 139, "revenue": 551000}, {"tgl": "2025-12-24", "jumlah_transaksi": 327, "revenue": 1165000}, {"tgl": "2025-12-25", "jumlah_transaksi": 154, "revenue": 517000}, {"tgl": "2025-12-26", "jumlah_transaksi": 166, "revenue": 747000}, {"tgl": "2025-12-27", "jumlah_transaksi": 113, "revenue": 469000}, {"tgl": "2025-12-28", "jumlah_transaksi": 54, "revenue": 252000}, {"tgl": "2025-12-29", "jumlah_transaksi": 151, "revenue": 693000}, {"tgl": "2025-12-30", "jumlah_transaksi": 307, "revenue": 1216000}, {"tgl": "2025-12-31", "jumlah_transaksi": 276, "revenue": 1032000}], "per_jam": [{"jam_masuk": 0, "jumlah": 183, "revenue": 831000}, {"jam_masuk": 1, "jumlah": 101, "revenue": 422000}, {"jam_masuk": 2, "jumlah": 99, "revenue": 472000}, {"jam_masuk": 3, "jumlah": 143, "revenue": 858000}, {"jam_masuk": 4, "jumlah": 243, "revenue": 1698000}, {"jam_masuk": 5, "jumlah": 490, "revenue": 2838000}, {"jam_masuk": 6, "jumlah": 1276, "revenue": 6794000}, {"jam_masuk": 7, "jumlah": 3123, "revenue": 14050000}, {"jam_masuk": 8, "jumlah": 4175, "revenue": 17206000}, {"jam_masuk": 9, "jumlah": 3535, "revenue": 13785000}, {"jam_masuk": 10, "jumlah": 3170, "revenue": 12415000}, {"jam_masuk": 11, "jumlah": 2894, "revenue": 12297000}, {"jam_masuk": 12, "jumlah": 2949, "revenue": 13387000}, {"jam_masuk": 13, "jumlah": 5136, "revenue": 22489000}, {"jam_masuk": 14, "jumlah": 3833, "revenue": 16413000}, {"jam_masuk": 15, "jumlah": 2590, "revenue": 10442000}, {"jam_masuk": 16, "jumlah": 3059, "revenue": 11148000}, {"jam_masuk": 17, "jumlah": 2666, "revenue": 9330000}, {"jam_masuk": 18, "jumlah": 2526, "revenue": 8788000}, {"jam_masuk": 19, "jumlah": 2469, "revenue": 8236000}, {"jam_masuk": 20, "jumlah": 1276, "revenue": 4482000}, {"jam_masuk": 21, "jumlah": 720, "revenue": 2823000}, {"jam_masuk": 22, "jumlah": 415, "revenue": 1791000}, {"jam_masuk": 23, "jumlah": 249, "revenue": 1058000}], "per_hari_minggu": [{"hari": "Monday", "jumlah": 8392, "revenue": 35064000, "hari_id": "Senin"}, {"hari": "Tuesday", "jumlah": 8172, "revenue": 34863000, "hari_id": "Selasa"}, {"hari": "Wednesday", "jumlah": 8208, "revenue": 33755000, "hari_id": "Rabu"}, {"hari": "Thursday", "jumlah": 7822, "revenue": 31790000, "hari_id": "Kamis"}, {"hari": "Friday", "jumlah": 6903, "revenue": 26976000, "hari_id": "Jumat"}, {"hari": "Saturday", "jumlah": 4764, "revenue": 19436000, "hari_id": "Sabtu"}, {"hari": "Sunday", "jumlah": 3059, "revenue": 12169000, "hari_id": "Minggu"}], "kategori_kendaraan": [{"id_kendaraan": "A", "jumlah": 11168, "revenue": 64713000, "avg_durasi": 2.4208908140321554, "avg_tarif": 5794.502148997135}, {"id_kendaraan": "C", "jumlah": 36152, "revenue": 129340000, "avg_durasi": 2.674196025730865, "avg_tarif": 3577.672051338792}], "distribusi_durasi": [{"kategori": "<1 jam", "jumlah": 16811}, {"kategori": "1-2 jam", "jumlah": 11195}, {"kategori": "2-3 jam", "jumlah": 9436}, {"kategori": "3-6 jam", "jumlah": 7889}, {"kategori": "6-12 jam", "jumlah": 1097}, {"kategori": "12-24 jam", "jumlah": 450}, {"kategori": ">24 jam", "jumlah": 442}], "per_shift": [{"id_shift_masuk": "S1", "jumlah": 39656, "revenue": 161750000}, {"id_shift_masuk": "S2", "jumlah": 7664, "revenue": 32303000}], "per_operator": [{"id_op_keluar": 1.0, "jumlah": 18120, "revenue": 73816000}, {"id_op_keluar": 3.0, "jumlah": 29200, "revenue": 120237000}], "top_tarif": [{"tarif": 3000, "jumlah": 12483}, {"tarif": 2000, "jumlah": 12171}, {"tarif": 4000, "jumlah": 7238}, {"tarif": 5000, "jumlah": 6075}, {"tarif": 7000, "jumlah": 4270}, {"tarif": 6000, "jumlah": 1638}, {"tarif": 9000, "jumlah": 1185}, {"tarif": 0, "jumlah": 841}, {"tarif": 11000, "jumlah": 542}, {"tarif": 12000, "jumlah": 515}, {"tarif": 14000, "jumlah": 139}, {"tarif": 21000, "jumlah": 29}]};
+const HARIAN = [{"tgl": "2025-06-14", "jumlah_transaksi": 2, "revenue": 499000}, {"tgl": "2025-06-19", "jumlah_transaksi": 1, "revenue": 21000}, {"tgl": "2025-06-20", "jumlah_transaksi": 3, "revenue": 34000}, {"tgl": "2025-06-21", "jumlah_transaksi": 172, "revenue": 611000}, {"tgl": "2025-06-22", "jumlah_transaksi": 101, "revenue": 349000}, {"tgl": "2025-06-23", "jumlah_transaksi": 307, "revenue": 1355000}, {"tgl": "2025-06-24", "jumlah_transaksi": 222, "revenue": 1121000}, {"tgl": "2025-06-25", "jumlah_transaksi": 258, "revenue": 959000}, {"tgl": "2025-06-26", "jumlah_transaksi": 226, "revenue": 897000}, {"tgl": "2025-06-27", "jumlah_transaksi": 157, "revenue": 539000}, {"tgl": "2025-06-28", "jumlah_transaksi": 145, "revenue": 521000}, {"tgl": "2025-06-29", "jumlah_transaksi": 97, "revenue": 451000}, {"tgl": "2025-06-30", "jumlah_transaksi": 273, "revenue": 1268000}, {"tgl": "2025-07-01", "jumlah_transaksi": 272, "revenue": 2348000}, {"tgl": "2025-07-02", "jumlah_transaksi": 259, "revenue": 1058000}, {"tgl": "2025-07-03", "jumlah_transaksi": 376, "revenue": 1343000}, {"tgl": "2025-07-04", "jumlah_transaksi": 326, "revenue": 1134000}, {"tgl": "2025-07-05", "jumlah_transaksi": 109, "revenue": 485000}, {"tgl": "2025-07-06", "jumlah_transaksi": 64, "revenue": 258000}, {"tgl": "2025-07-07", "jumlah_transaksi": 226, "revenue": 866000}, {"tgl": "2025-07-08", "jumlah_transaksi": 217, "revenue": 924000}, {"tgl": "2025-07-09", "jumlah_transaksi": 389, "revenue": 1397000}, {"tgl": "2025-07-10", "jumlah_transaksi": 443, "revenue": 1452000}, {"tgl": "2025-07-11", "jumlah_transaksi": 208, "revenue": 893000}, {"tgl": "2025-07-12", "jumlah_transaksi": 164, "revenue": 648000}, {"tgl": "2025-07-13", "jumlah_transaksi": 118, "revenue": 665000}, {"tgl": "2025-07-14", "jumlah_transaksi": 292, "revenue": 1110000}, {"tgl": "2025-07-15", "jumlah_transaksi": 410, "revenue": 1556000}, {"tgl": "2025-07-16", "jumlah_transaksi": 368, "revenue": 1368000}, {"tgl": "2025-07-17", "jumlah_transaksi": 313, "revenue": 1382000}, {"tgl": "2025-07-18", "jumlah_transaksi": 288, "revenue": 1171000}, {"tgl": "2025-07-19", "jumlah_transaksi": 172, "revenue": 665000}, {"tgl": "2025-07-20", "jumlah_transaksi": 83, "revenue": 311000}, {"tgl": "2025-07-21", "jumlah_transaksi": 411, "revenue": 1337000}, {"tgl": "2025-07-22", "jumlah_transaksi": 407, "revenue": 1484000}, {"tgl": "2025-07-23", "jumlah_transaksi": 275, "revenue": 1094000}, {"tgl": "2025-07-24", "jumlah_transaksi": 300, "revenue": 1254000}, {"tgl": "2025-07-25", "jumlah_transaksi": 235, "revenue": 835000}, {"tgl": "2025-07-26", "jumlah_transaksi": 141, "revenue": 521000}, {"tgl": "2025-07-27", "jumlah_transaksi": 119, "revenue": 449000}, {"tgl": "2025-07-28", "jumlah_transaksi": 287, "revenue": 1048000}, {"tgl": "2025-07-29", "jumlah_transaksi": 233, "revenue": 1084000}, {"tgl": "2025-07-30", "jumlah_transaksi": 252, "revenue": 1135000}, {"tgl": "2025-07-31", "jumlah_transaksi": 208, "revenue": 869000}, {"tgl": "2025-08-01", "jumlah_transaksi": 224, "revenue": 1113000}, {"tgl": "2025-08-02", "jumlah_transaksi": 207, "revenue": 702000}, {"tgl": "2025-08-03", "jumlah_transaksi": 133, "revenue": 506000}, {"tgl": "2025-08-04", "jumlah_transaksi": 271, "revenue": 1208000}, {"tgl": "2025-08-05", "jumlah_transaksi": 273, "revenue": 1231000}, {"tgl": "2025-08-06", "jumlah_transaksi": 248, "revenue": 1023000}, {"tgl": "2025-08-07", "jumlah_transaksi": 218, "revenue": 935000}, {"tgl": "2025-08-08", "jumlah_transaksi": 324, "revenue": 1208000}, {"tgl": "2025-08-09", "jumlah_transaksi": 200, "revenue": 666000}, {"tgl": "2025-08-10", "jumlah_transaksi": 122, "revenue": 514000}, {"tgl": "2025-08-11", "jumlah_transaksi": 309, "revenue": 1533000}, {"tgl": "2025-08-12", "jumlah_transaksi": 290, "revenue": 1384000}, {"tgl": "2025-08-13", "jumlah_transaksi": 198, "revenue": 1008000}, {"tgl": "2025-08-14", "jumlah_transaksi": 292, "revenue": 1109000}, {"tgl": "2025-08-15", "jumlah_transaksi": 392, "revenue": 1444000}, {"tgl": "2025-08-16", "jumlah_transaksi": 174, "revenue": 1065000}, {"tgl": "2025-08-17", "jumlah_transaksi": 97, "revenue": 363000}, {"tgl": "2025-08-18", "jumlah_transaksi": 178, "revenue": 666000}, {"tgl": "2025-08-19", "jumlah_transaksi": 259, "revenue": 1084000}, {"tgl": "2025-08-20", "jumlah_transaksi": 420, "revenue": 1591000}, {"tgl": "2025-08-21", "jumlah_transaksi": 392, "revenue": 1459000}, {"tgl": "2025-08-22", "jumlah_transaksi": 239, "revenue": 1078000}, {"tgl": "2025-08-23", "jumlah_transaksi": 166, "revenue": 641000}, {"tgl": "2025-08-24", "jumlah_transaksi": 122, "revenue": 438000}, {"tgl": "2025-08-25", "jumlah_transaksi": 347, "revenue": 1454000}, {"tgl": "2025-08-26", "jumlah_transaksi": 437, "revenue": 1569000}, {"tgl": "2025-08-27", "jumlah_transaksi": 402, "revenue": 1494000}, {"tgl": "2025-08-28", "jumlah_transaksi": 277, "revenue": 1300000}, {"tgl": "2025-08-29", "jumlah_transaksi": 230, "revenue": 1061000}, {"tgl": "2025-08-30", "jumlah_transaksi": 203, "revenue": 821000}, {"tgl": "2025-08-31", "jumlah_transaksi": 95, "revenue": 389000}, {"tgl": "2025-09-01", "jumlah_transaksi": 364, "revenue": 1276000}, {"tgl": "2025-09-02", "jumlah_transaksi": 377, "revenue": 1344000}, {"tgl": "2025-09-03", "jumlah_transaksi": 302, "revenue": 1424000}, {"tgl": "2025-09-04", "jumlah_transaksi": 274, "revenue": 1174000}, {"tgl": "2025-09-05", "jumlah_transaksi": 193, "revenue": 754000}, {"tgl": "2025-09-06", "jumlah_transaksi": 156, "revenue": 651000}, {"tgl": "2025-09-07", "jumlah_transaksi": 173, "revenue": 529000}, {"tgl": "2025-09-08", "jumlah_transaksi": 403, "revenue": 1432000}, {"tgl": "2025-09-09", "jumlah_transaksi": 323, "revenue": 1479000}, {"tgl": "2025-09-10", "jumlah_transaksi": 264, "revenue": 1170000}, {"tgl": "2025-09-11", "jumlah_transaksi": 323, "revenue": 1368000}, {"tgl": "2025-09-12", "jumlah_transaksi": 258, "revenue": 953000}, {"tgl": "2025-09-13", "jumlah_transaksi": 332, "revenue": 1097000}, {"tgl": "2025-09-14", "jumlah_transaksi": 164, "revenue": 626000}, {"tgl": "2025-09-15", "jumlah_transaksi": 322, "revenue": 1564000}, {"tgl": "2025-09-16", "jumlah_transaksi": 310, "revenue": 1442000}, {"tgl": "2025-09-17", "jumlah_transaksi": 243, "revenue": 962000}, {"tgl": "2025-09-18", "jumlah_transaksi": 267, "revenue": 1105000}, {"tgl": "2025-09-19", "jumlah_transaksi": 313, "revenue": 1117000}, {"tgl": "2025-09-20", "jumlah_transaksi": 316, "revenue": 1160000}, {"tgl": "2025-09-21", "jumlah_transaksi": 108, "revenue": 505000}, {"tgl": "2025-09-22", "jumlah_transaksi": 276, "revenue": 1184000}, {"tgl": "2025-09-23", "jumlah_transaksi": 343, "revenue": 1353000}, {"tgl": "2025-09-24", "jumlah_transaksi": 319, "revenue": 1261000}, {"tgl": "2025-09-25", "jumlah_transaksi": 382, "revenue": 1492000}, {"tgl": "2025-09-26", "jumlah_transaksi": 394, "revenue": 1403000}, {"tgl": "2025-09-27", "jumlah_transaksi": 225, "revenue": 958000}, {"tgl": "2025-09-28", "jumlah_transaksi": 178, "revenue": 759000}, {"tgl": "2025-09-29", "jumlah_transaksi": 354, "revenue": 1561000}, {"tgl": "2025-09-30", "jumlah_transaksi": 235, "revenue": 1091000}, {"tgl": "2025-10-01", "jumlah_transaksi": 397, "revenue": 1782000}, {"tgl": "2025-10-02", "jumlah_transaksi": 458, "revenue": 1724000}, {"tgl": "2025-10-03", "jumlah_transaksi": 305, "revenue": 1317000}, {"tgl": "2025-10-04", "jumlah_transaksi": 144, "revenue": 627000}, {"tgl": "2025-10-05", "jumlah_transaksi": 127, "revenue": 531000}, {"tgl": "2025-10-06", "jumlah_transaksi": 260, "revenue": 1074000}, {"tgl": "2025-10-07", "jumlah_transaksi": 396, "revenue": 1334000}, {"tgl": "2025-10-08", "jumlah_transaksi": 399, "revenue": 1529000}, {"tgl": "2025-10-09", "jumlah_transaksi": 282, "revenue": 1181000}, {"tgl": "2025-10-10", "jumlah_transaksi": 223, "revenue": 942000}, {"tgl": "2025-10-11", "jumlah_transaksi": 95, "revenue": 672000}, {"tgl": "2025-10-12", "jumlah_transaksi": 32, "revenue": 196000}, {"tgl": "2025-10-13", "jumlah_transaksi": 334, "revenue": 1266000}, {"tgl": "2025-10-14", "jumlah_transaksi": 410, "revenue": 1588000}, {"tgl": "2025-10-15", "jumlah_transaksi": 299, "revenue": 1432000}, {"tgl": "2025-10-16", "jumlah_transaksi": 391, "revenue": 1733000}, {"tgl": "2025-10-17", "jumlah_transaksi": 227, "revenue": 946000}, {"tgl": "2025-10-18", "jumlah_transaksi": 150, "revenue": 600000}, {"tgl": "2025-10-19", "jumlah_transaksi": 166, "revenue": 543000}, {"tgl": "2025-10-20", "jumlah_transaksi": 401, "revenue": 1389000}, {"tgl": "2025-10-21", "jumlah_transaksi": 266, "revenue": 1215000}, {"tgl": "2025-10-22", "jumlah_transaksi": 365, "revenue": 1655000}, {"tgl": "2025-10-23", "jumlah_transaksi": 186, "revenue": 798000}, {"tgl": "2025-10-24", "jumlah_transaksi": 149, "revenue": 597000}, {"tgl": "2025-10-25", "jumlah_transaksi": 211, "revenue": 673000}, {"tgl": "2025-10-26", "jumlah_transaksi": 133, "revenue": 442000}, {"tgl": "2025-10-27", "jumlah_transaksi": 310, "revenue": 1374000}, {"tgl": "2025-10-28", "jumlah_transaksi": 279, "revenue": 1275000}, {"tgl": "2025-10-29", "jumlah_transaksi": 180, "revenue": 792000}, {"tgl": "2025-10-30", "jumlah_transaksi": 134, "revenue": 967000}, {"tgl": "2025-10-31", "jumlah_transaksi": 217, "revenue": 791000}, {"tgl": "2025-11-01", "jumlah_transaksi": 174, "revenue": 634000}, {"tgl": "2025-11-02", "jumlah_transaksi": 114, "revenue": 480000}, {"tgl": "2025-11-03", "jumlah_transaksi": 332, "revenue": 1788000}, {"tgl": "2025-11-04", "jumlah_transaksi": 181, "revenue": 746000}, {"tgl": "2025-11-05", "jumlah_transaksi": 162, "revenue": 700000}, {"tgl": "2025-11-06", "jumlah_transaksi": 315, "revenue": 1179000}, {"tgl": "2025-11-07", "jumlah_transaksi": 341, "revenue": 1212000}, {"tgl": "2025-11-08", "jumlah_transaksi": 138, "revenue": 639000}, {"tgl": "2025-11-09", "jumlah_transaksi": 98, "revenue": 408000}, {"tgl": "2025-11-10", "jumlah_transaksi": 150, "revenue": 1076000}, {"tgl": "2025-11-11", "jumlah_transaksi": 159, "revenue": 709000}, {"tgl": "2025-11-12", "jumlah_transaksi": 342, "revenue": 1331000}, {"tgl": "2025-11-13", "jumlah_transaksi": 306, "revenue": 1117000}, {"tgl": "2025-11-14", "jumlah_transaksi": 245, "revenue": 977000}, {"tgl": "2025-11-15", "jumlah_transaksi": 119, "revenue": 495000}, {"tgl": "2025-11-16", "jumlah_transaksi": 95, "revenue": 371000}, {"tgl": "2025-11-17", "jumlah_transaksi": 185, "revenue": 871000}, {"tgl": "2025-11-18", "jumlah_transaksi": 361, "revenue": 1465000}, {"tgl": "2025-11-19", "jumlah_transaksi": 235, "revenue": 895000}, {"tgl": "2025-11-20", "jumlah_transaksi": 266, "revenue": 1136000}, {"tgl": "2025-11-21", "jumlah_transaksi": 295, "revenue": 1227000}, {"tgl": "2025-11-22", "jumlah_transaksi": 143, "revenue": 548000}, {"tgl": "2025-11-23", "jumlah_transaksi": 57, "revenue": 256000}, {"tgl": "2025-11-24", "jumlah_transaksi": 392, "revenue": 1352000}, {"tgl": "2025-11-25", "jumlah_transaksi": 429, "revenue": 1468000}, {"tgl": "2025-11-26", "jumlah_transaksi": 335, "revenue": 1492000}, {"tgl": "2025-11-27", "jumlah_transaksi": 330, "revenue": 1525000}, {"tgl": "2025-11-28", "jumlah_transaksi": 192, "revenue": 708000}, {"tgl": "2025-11-29", "jumlah_transaksi": 101, "revenue": 431000}, {"tgl": "2025-11-30", "jumlah_transaksi": 112, "revenue": 410000}, {"tgl": "2025-12-01", "jumlah_transaksi": 409, "revenue": 1435000}, {"tgl": "2025-12-02", "jumlah_transaksi": 261, "revenue": 1236000}, {"tgl": "2025-12-03", "jumlah_transaksi": 298, "revenue": 1337000}, {"tgl": "2025-12-04", "jumlah_transaksi": 151, "revenue": 621000}, {"tgl": "2025-12-05", "jumlah_transaksi": 130, "revenue": 562000}, {"tgl": "2025-12-06", "jumlah_transaksi": 186, "revenue": 683000}, {"tgl": "2025-12-07", "jumlah_transaksi": 115, "revenue": 388000}, {"tgl": "2025-12-08", "jumlah_transaksi": 283, "revenue": 1366000}, {"tgl": "2025-12-09", "jumlah_transaksi": 149, "revenue": 636000}, {"tgl": "2025-12-10", "jumlah_transaksi": 162, "revenue": 710000}, {"tgl": "2025-12-11", "jumlah_transaksi": 182, "revenue": 772000}, {"tgl": "2025-12-12", "jumlah_transaksi": 351, "revenue": 1229000}, {"tgl": "2025-12-13", "jumlah_transaksi": 175, "revenue": 636000}, {"tgl": "2025-12-14", "jumlah_transaksi": 98, "revenue": 380000}, {"tgl": "2025-12-15", "jumlah_transaksi": 395, "revenue": 1810000}, {"tgl": "2025-12-16", "jumlah_transaksi": 227, "revenue": 930000}, {"tgl": "2025-12-17", "jumlah_transaksi": 234, "revenue": 959000}, {"tgl": "2025-12-18", "jumlah_transaksi": 375, "revenue": 1360000}, {"tgl": "2025-12-19", "jumlah_transaksi": 278, "revenue": 984000}, {"tgl": "2025-12-20", "jumlah_transaksi": 131, "revenue": 618000}, {"tgl": "2025-12-21", "jumlah_transaksi": 84, "revenue": 400000}, {"tgl": "2025-12-22", "jumlah_transaksi": 170, "revenue": 708000}, {"tgl": "2025-12-23", "jumlah_transaksi": 139, "revenue": 551000}, {"tgl": "2025-12-24", "jumlah_transaksi": 327, "revenue": 1165000}, {"tgl": "2025-12-25", "jumlah_transaksi": 154, "revenue": 517000}, {"tgl": "2025-12-26", "jumlah_transaksi": 166, "revenue": 747000}, {"tgl": "2025-12-27", "jumlah_transaksi": 113, "revenue": 469000}, {"tgl": "2025-12-28", "jumlah_transaksi": 54, "revenue": 252000}, {"tgl": "2025-12-29", "jumlah_transaksi": 151, "revenue": 693000}, {"tgl": "2025-12-30", "jumlah_transaksi": 307, "revenue": 1216000}, {"tgl": "2025-12-31", "jumlah_transaksi": 276, "revenue": 1032000}];
+
+const fmtRp = (n) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+const fmtRpShort = (n) => {
+  if(n>=1e9) return 'Rp '+(n/1e9).toFixed(1)+' M';
+  if(n>=1e6) return 'Rp '+(n/1e6).toFixed(1)+' Jt';
+  if(n>=1e3) return 'Rp '+(n/1e3).toFixed(0)+' Rb';
+  return 'Rp '+n;
+};
+const fmtNum = (n) => Math.round(n).toLocaleString('id-ID');
+
+Chart.defaults.color = '#9aa3ab';
+Chart.defaults.borderColor = '#3a4047';
+Chart.defaults.font.family = "'Inter','Segoe UI',sans-serif";
+
+const KUNING = '#f4c430';
+const HIJAU = '#4caf7d';
+const BIRU = '#5b9bd1';
+const MERAH = '#e0635a';
+const ABU = '#6b7378';
+
+// ===== KPI =====
+document.getElementById('kpi-total-trx').textContent = fmtNum(AGG.kpi.total_transaksi_valid);
+document.getElementById('kpi-revenue').textContent = fmtRpShort(AGG.kpi.total_revenue);
+document.getElementById('kpi-avg-day').textContent = fmtRpShort(AGG.kpi.avg_revenue_per_hari);
+document.getElementById('kpi-avg-day-trx').textContent = fmtNum(AGG.kpi.avg_transaksi_per_hari) + ' transaksi/hari';
+document.getElementById('kpi-avg-tarif').textContent = fmtRp(AGG.kpi.avg_revenue_per_transaksi);
+document.getElementById('kpi-avg-durasi').textContent = AGG.kpi.avg_durasi_jam.toFixed(1) + ' jam';
+document.getElementById('kpi-median-durasi').textContent = 'median: ' + AGG.kpi.median_durasi_jam.toFixed(1) + ' jam';
+document.getElementById('kpi-anomali').textContent = fmtNum(AGG.kpi.total_anomali_auto_close);
+
+document.getElementById('anom-autoclose').textContent = fmtNum(AGG.kpi.total_anomali_auto_close) + ' baris';
+document.getElementById('anom-autoclose-2').textContent = fmtNum(AGG.kpi.total_anomali_auto_close);
+document.getElementById('anom-overstay').textContent = fmtNum(AGG.kpi.jumlah_overstay_24j) + ' transaksi';
+document.getElementById('anom-overstay-2').textContent = fmtNum(AGG.kpi.jumlah_overstay_24j);
+document.getElementById('anom-overstay-rev').textContent = fmtRpShort(AGG.kpi.revenue_overstay_24j);
+document.getElementById('anom-gratis').textContent = fmtNum(AGG.kpi.jumlah_transaksi_gratis);
+
+// ===== CHART: TREND HARIAN (toggle) =====
+let currentMetric = 'revenue';
+const ctxHarian = document.getElementById('chartHarian');
+const chartHarian = new Chart(ctxHarian, {
+  type:'line',
+  data:{
+    labels: HARIAN.map(d=>d.tgl.slice(5)),
+    datasets:[{
+      label:'Pendapatan',
+      data: HARIAN.map(d=>d.revenue),
+      borderColor:KUNING,
+      backgroundColor:'#f4c43022',
+      fill:true,
+      tension:.25,
+      pointRadius:0,
+      borderWidth:2,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        callbacks:{
+          label: (ctx)=> currentMetric==='revenue' ? fmtRp(ctx.parsed.y) : fmtNum(ctx.parsed.y) + ' transaksi'
+        }
+      }
+    },
+    scales:{
+      x:{ grid:{display:false}, ticks:{maxTicksLimit:14, font:{size:10}} },
+      y:{ grid:{color:'#3a4047'}, ticks:{ callback:(v)=> currentMetric==='revenue'?fmtRpShort(v):fmtNum(v), font:{size:10} } }
+    }
+  }
+});
+document.querySelectorAll('.toggle-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMetric = btn.dataset.metric;
+    chartHarian.data.datasets[0].data = HARIAN.map(d=>d[currentMetric]);
+    chartHarian.data.datasets[0].label = currentMetric==='revenue' ? 'Pendapatan' : 'Jumlah Transaksi';
+    chartHarian.data.datasets[0].borderColor = currentMetric==='revenue' ? KUNING : BIRU;
+    chartHarian.data.datasets[0].backgroundColor = currentMetric==='revenue' ? '#f4c43022' : '#5b9bd122';
+    chartHarian.options.scales.y.ticks.callback = (v)=> currentMetric==='revenue'?fmtRpShort(v):fmtNum(v);
+    chartHarian.update();
+  });
+});
+
+// ===== CHART: BULANAN =====
+const namaBulan = {'2025-06':'Jun','2025-07':'Jul','2025-08':'Ags','2025-09':'Sep','2025-10':'Okt','2025-11':'Nov','2025-12':'Des'};
+new Chart(document.getElementById('chartBulanan'), {
+  data:{
+    labels: AGG.trend_bulanan.map(d=>namaBulan[d.bulan]||d.bulan),
+    datasets:[
+      {
+        type:'bar',
+        label:'Pendapatan',
+        data: AGG.trend_bulanan.map(d=>d.revenue),
+        backgroundColor:KUNING,
+        borderRadius:5,
+        order:2,
+        yAxisID:'y'
+      },
+      {
+        type:'line',
+        label:'Jumlah Transaksi',
+        data: AGG.trend_bulanan.map(d=>d.jumlah_transaksi),
+        borderColor:BIRU,
+        backgroundColor:BIRU,
+        tension:.3,
+        yAxisID:'y1',
+        order:1
+      }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'top', labels:{boxWidth:12, font:{size:11}} },
+      tooltip:{ callbacks:{ label:(ctx)=> ctx.dataset.label==='Pendapatan' ? fmtRp(ctx.parsed.y) : fmtNum(ctx.parsed.y)+' transaksi' } }
+    },
+    scales:{
+      x:{ grid:{display:false} },
+      y:{ position:'left', grid:{color:'#3a4047'}, ticks:{ callback:fmtRpShort, font:{size:10} } },
+      y1:{ position:'right', grid:{display:false}, ticks:{ callback:fmtNum, font:{size:10} } }
+    }
+  }
+});
+
+// ===== CHART: KATEGORI =====
+new Chart(document.getElementById('chartKategori'), {
+  type:'doughnut',
+  data:{
+    labels: AGG.kategori_kendaraan.map(d=>'Kategori '+d.id_kendaraan),
+    datasets:[{
+      data: AGG.kategori_kendaraan.map(d=>d.jumlah),
+      backgroundColor:[KUNING, BIRU],
+      borderColor:'#23282d',
+      borderWidth:3,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'bottom', labels:{boxWidth:12, font:{size:11}} },
+      tooltip:{ callbacks:{ label:(ctx)=> ctx.label+': '+fmtNum(ctx.parsed)+' transaksi' } } }
+  }
+});
+let katHtml = '';
+AGG.kategori_kendaraan.forEach(d=>{
+  katHtml += `<div class="pill" style="margin:3px 4px 3px 0;"><span class="dot" style="background:${d.id_kendaraan==='A'?KUNING:BIRU}"></span>
+  Kategori ${d.id_kendaraan}: rata-rata tarif ${fmtRp(d.avg_tarif)}, durasi ${d.avg_durasi.toFixed(1)} jam</div>`;
+});
+document.getElementById('kategori-detail').innerHTML = katHtml;
+
+// ===== CHART: PER JAM =====
+new Chart(document.getElementById('chartJam'), {
+  type:'bar',
+  data:{
+    labels: AGG.per_jam.map(d=>String(d.jam_masuk).padStart(2,'0')+':00'),
+    datasets:[{
+      label:'Kendaraan Masuk',
+      data: AGG.per_jam.map(d=>d.jumlah),
+      backgroundColor: AGG.per_jam.map(d=> d.jumlah > 3000 ? KUNING : '#f4c43077'),
+      borderRadius:4,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=>fmtNum(ctx.parsed.y)+' kendaraan' } } },
+    scales:{ x:{ grid:{display:false}, ticks:{font:{size:9}} }, y:{ grid:{color:'#3a4047'}, ticks:{font:{size:10}} } }
+  }
+});
+
+// ===== CHART: HARI MINGGU =====
+new Chart(document.getElementById('chartHariMinggu'), {
+  type:'bar',
+  data:{
+    labels: AGG.per_hari_minggu.map(d=>d.hari_id),
+    datasets:[{
+      label:'Pendapatan',
+      data: AGG.per_hari_minggu.map(d=>d.revenue),
+      backgroundColor: AGG.per_hari_minggu.map(d=> ['Sabtu','Minggu'].includes(d.hari_id) ? BIRU : KUNING),
+      borderRadius:5,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=>fmtRp(ctx.parsed.y) } } },
+    scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#3a4047'}, ticks:{ callback:fmtRpShort, font:{size:10} } } }
+  }
+});
+
+const jamPuncak = AGG.per_jam.reduce((a,b)=> b.jumlah>a.jumlah?b:a);
+const hariPuncak = AGG.per_hari_minggu.reduce((a,b)=> b.revenue>a.revenue?b:a);
+const hariSepi = AGG.per_hari_minggu.reduce((a,b)=> b.revenue<a.revenue?b:a);
+document.getElementById('insight-jam').innerHTML =
+  `<b>Insight:</b> Jam tersibuk berada di pukul <b>${String(jamPuncak.jam_masuk).padStart(2,'0')}:00</b> dengan ${fmtNum(jamPuncak.jumlah)} kendaraan masuk — selaras dengan pola jam berangkat &amp; istirahat siang kerja.
+  Pendapatan tertinggi terjadi pada hari <b>${hariPuncak.hari_id}</b> (${fmtRp(hariPuncak.revenue)}), sementara hari <b>${hariSepi.hari_id}</b> tercatat paling rendah (${fmtRp(hariSepi.revenue)}) — pola hari kerja vs akhir pekan ini konsisten dan bisa jadi dasar untuk menyesuaikan jumlah personel jaga di akhir pekan.`;
+
+// ===== CHART: DURASI =====
+new Chart(document.getElementById('chartDurasi'), {
+  type:'bar',
+  data:{
+    labels: AGG.distribusi_durasi.map(d=>d.kategori),
+    datasets:[{
+      label:'Jumlah Transaksi',
+      data: AGG.distribusi_durasi.map(d=>d.jumlah),
+      backgroundColor: AGG.distribusi_durasi.map(d=> d.kategori==='>24 jam' ? MERAH : KUNING),
+      borderRadius:5,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false, indexAxis:'y',
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=>fmtNum(ctx.parsed.x)+' transaksi' } } },
+    scales:{ x:{ grid:{color:'#3a4047'} }, y:{ grid:{display:false} } }
+  }
+});
+
+// ===== CHART: TARIF =====
+new Chart(document.getElementById('chartTarif'), {
+  type:'bar',
+  data:{
+    labels: AGG.top_tarif.map(d=>'Rp '+fmtNum(d.tarif)),
+    datasets:[{
+      label:'Frekuensi',
+      data: AGG.top_tarif.map(d=>d.jumlah),
+      backgroundColor: BIRU,
+      borderRadius:5,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=>fmtNum(ctx.parsed.y)+' kali' } } },
+    scales:{ x:{ grid:{display:false}, ticks:{font:{size:9}} }, y:{ grid:{color:'#3a4047'} } }
+  }
+});
+
+// ===== TABEL SHIFT =====
+const totalRevShift = AGG.per_shift.reduce((a,b)=>a+b.revenue,0);
+document.getElementById('tabel-shift').innerHTML = AGG.per_shift.map(d=>
+  `<tr><td>${d.id_shift_masuk}</td><td class="num">${fmtNum(d.jumlah)}</td><td class="num">${fmtRp(d.revenue)}</td><td class="num">${(d.revenue/totalRevShift*100).toFixed(1)}%</td></tr>`
+).join('');
+
+// ===== TABEL OPERATOR =====
+const totalRevOp = AGG.per_operator.reduce((a,b)=>a+b.revenue,0);
+document.getElementById('tabel-operator').innerHTML = AGG.per_operator.map(d=>
+  `<tr><td>Operator ${d.id_op_keluar}</td><td class="num">${fmtNum(d.jumlah)}</td><td class="num">${fmtRp(d.revenue)}</td><td class="num">${(d.revenue/totalRevOp*100).toFixed(1)}%</td></tr>`
+).join('');
+</script>
+
+</body>
+</html>
